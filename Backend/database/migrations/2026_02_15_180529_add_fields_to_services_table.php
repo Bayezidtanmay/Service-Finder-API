@@ -1,0 +1,32 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('services', function (Blueprint $table) {
+            $table->string('name')->after('id');
+            $table->string('city')->nullable()->after('name');
+            $table->string('address')->nullable()->after('city');
+            $table->text('description')->nullable()->after('address');
+            $table->unsignedInteger('base_price_cents')->default(0)->after('description');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('services', function (Blueprint $table) {
+            $table->dropColumn([
+                'name',
+                'city',
+                'address',
+                'description',
+                'base_price_cents',
+            ]);
+        });
+    }
+};
