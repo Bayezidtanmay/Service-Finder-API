@@ -16,9 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // API middleware group (Laravel 11 replacement for Kernel.php)
         $middleware->group('api', [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
+
 
         // Middleware aliases (route middleware)
         $middleware->alias([
