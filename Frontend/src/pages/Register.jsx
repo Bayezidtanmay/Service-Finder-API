@@ -1,51 +1,60 @@
 import { useState } from "react";
-import { api, setToken } from "../api";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 export default function Register() {
-    const [name, setName] = useState("New User");
+    const nav = useNavigate();
+    const { register } = useAuth();
+
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("password123");
-    const [error, setError] = useState("");
+    const [password, setPassword] = useState("");
+    const [err, setErr] = useState("");
+    const [busy, setBusy] = useState(false);
 
-    const onSubmit = async (e) => {
+    async function onSubmit(e) {
         e.preventDefault();
-        setError("");
-
+        setErr("");
+        setBusy(true);
         try {
-            const data = await api("/auth/register", {
-                method: "POST",
-                body: { name, email, password },
-            });
-
-            setToken(data.token);
-            window.location.href = "/services";
-        } catch (err) {
-            setError(err.message);
+            await register(name, email, password);
+            nav("/services");
+        } catch (e) {
+            setErr(e.message || "Register failed");
+        } finally {
+            setBusy(false);
         }
-    };
+    }
 
     return (
         <div className="container">
             <h1>Register</h1>
 
-            {error && <p className="error">{error}</p>}
+            <div className="card">
+                <form onSubmit={onSubmit}>
+                    <label>Name</label>
+                    <input value={name} onChange={(e) => setName(e.target.value)} />
 
-            <form onSubmit={onSubmit} className="card">
-                <label>Name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} />
+                    <label>Email</label>
+                    <input value={email} onChange={(e) => setEmail(e.target.value)} />
 
-                <label>Email</label>
-                <input value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <label>Password</label>
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
 
-                <label>Password</label>
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+                    {err && <p className="error">{err}</p>}
 
-                <button type="submit">Create account</button>
-            </form>
+                    <button disabled={busy}>{busy ? "Creating..." : "Create account"}</button>
+                </form>
+
+                <p style={{ marginTop: 12, opacity: 0.8 }}>
+                    Already have an account? <Link to="/login">Login</Link>
+                </p>
+            </div>
         </div>
     );
 }
+

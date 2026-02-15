@@ -1,47 +1,56 @@
 import { useState } from "react";
-import { api, setToken } from "../api";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 export default function Login() {
-    const [email, setEmail] = useState("admin@test.fi");
-    const [password, setPassword] = useState("password123");
-    const [error, setError] = useState("");
+    const nav = useNavigate();
+    const { login } = useAuth();
 
-    const onSubmit = async (e) => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [err, setErr] = useState("");
+    const [busy, setBusy] = useState(false);
+
+    async function onSubmit(e) {
         e.preventDefault();
-        setError("");
-
+        setErr("");
+        setBusy(true);
         try {
-            const data = await api("/auth/login", {
-                method: "POST",
-                body: { email, password },
-            });
-
-            setToken(data.token);
-            window.location.href = "/services";
-        } catch (err) {
-            setError(err.message);
+            await login(email, password);
+            nav("/services");
+        } catch (e) {
+            setErr(e.message || "Login failed");
+        } finally {
+            setBusy(false);
         }
-    };
+    }
 
     return (
         <div className="container">
             <h1>Login</h1>
 
-            {error && <p className="error">{error}</p>}
+            <div className="card">
+                <form onSubmit={onSubmit}>
+                    <label>Email</label>
+                    <input value={email} onChange={(e) => setEmail(e.target.value)} />
 
-            <form onSubmit={onSubmit} className="card">
-                <label>Email</label>
-                <input value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <label>Password</label>
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
 
-                <label>Password</label>
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+                    {err && <p className="error">{err}</p>}
 
-                <button type="submit">Login</button>
-            </form>
+                    <button disabled={busy}>{busy ? "Logging in..." : "Login"}</button>
+                </form>
+
+                <p style={{ marginTop: 12, opacity: 0.8 }}>
+                    No account? <Link to="/register">Register</Link>
+                </p>
+            </div>
         </div>
     );
 }
+
