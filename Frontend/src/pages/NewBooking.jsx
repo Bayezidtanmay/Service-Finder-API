@@ -1,80 +1,74 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
-import { useNavigate } from "react-router-dom";
+
+const money = (cents) =>
+    cents == null ? "-" : `€${(Number(cents) / 100).toFixed(2)}`;
 
 export default function NewBooking() {
     const nav = useNavigate();
+    const [params] = useSearchParams();
 
-    const [services, setServices] = useState([]);
-    const [loadingServices, setLoadingServices] = useState(true);
+    const serviceId = useMemo(() => {
+        const v = params.get("service_id");
+        return v ? Number(v) : null;
+    }, [params]);
 
-    const [serviceId, setServiceId] = useState("");
+    const [service, setService] = useState(null);
+    const [loadingService, setLoadingService] = useState(true);
+
     const [requestedTime, setRequestedTime] = useState("");
     const [problemDescription, setProblemDescription] = useState("");
-
-    const [submitting, setSubmitting] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
-    const [ok, setOk] = useState("");
 
+    // Load service info
     useEffect(() => {
+        if (!serviceId) {
+            setLoadingService(false);
+            return;
+        }
+
         (async () => {
             try {
-                setLoadingServices(true);
-                const data = await api("/services");
-                setServices(Array.isArray(data) ? data : []);
+                setLoadingService(true);
+                const services = await api("/services");
+                const found = services.find((s) => s.id === serviceId);
+                setService(found || null);
             } catch (e) {
-                setError(e.message || "Failed to load services");
+                setError("Failed to load service information");
             } finally {
-                setLoadingServices(false);
+                setLoadingService(false);
             }
         })();
-    }, []);
+    }, [serviceId]);
 
-    const canSubmit = useMemo(() => {
-        return (
-            !!serviceId &&
-            !!requestedTime &&
-            problemDescription.trim().length >= 5 &&
-            !submitting
-        );
-    }, [serviceId, requestedTime, problemDescription, submitting]);
-
-    async function submit(e) {
+    async function handleSubmit(e) {
         e.preventDefault();
         setError("");
-        setOk("");
 
-        if (!serviceId) return setError("Please select a service.");
-        if (!requestedTime) return setError("Please select requested time.");
-        if (problemDescription.trim().length < 5)
-            return setError("Please describe the problem (at least 5 characters).");
+        if (!serviceId) {
+            setError("Missing service. Please go back and select a service again.");
+            return;
+        }
 
         try {
-            setSubmitting(true);
+            setSaving(true);
 
-            // Backend usually expects: service_id, requested_time, problem_description
-            const payload = {
-                service_id: Number(serviceId),
-                requested_time: requestedTime, // "YYYY-MM-DDTHH:mm"
-                problem_description: problemDescription.trim(),
-            };
-
-            const created = await api("/bookings", {
+            await api("/bookings", {
                 method: "POST",
-                body: JSON.stringify(payload),
+                body: JSON.stringify({
+                    service_id: serviceId,
+                    requested_time: requestedTime || null,
+                    problem_description: problemDescription || null,
+                }),
             });
 
-            setOk("Booking created ✅");
-
-            // Optional: go to “My bookings” page later when we build it
-            // For now redirect back to services after 800ms
-            setTimeout(() => nav("/services"), 800);
-
-            return created;
-        } catch (e) {
-            setError(e.message || "Booking failed");
+            nav("/bookings/me");
+        } catch (err) {
+            setError(err.message || "Booking failed");
         } finally {
-            setSubmitting(false);
+            setSaving(false);
         }
     }
 
@@ -82,45 +76,47 @@ export default function NewBooking() {
         <div className="container">
             <div className="row">
                 <h1>New Booking</h1>
-                <button onClick={() => nav("/services")}>Back</button>
+                <button type="button" onClick={() => nav("/services")}>
+                    Back
+                </button>
             </div>
 
+            {/* SERVICE INFO */}
+            <div className="card">
+                {loadingService && <p>Loading service…</p>}
+
+                {!loadingService && service && (
+                    <>
+                        <h2 style={{ marginTop: 0 }}>{service.name}</h2>
+
+                        {service.city && (
+                            <p>
+                                <b>City:</b> {service.city}
+                            </p>
+                        )}
+
+                        {"base_price_cents" in service && (
+                            <p>
+                                <b>Base price:</b> {money(service.base_price_cents)}
+                            </p>
+                        )}
+                    </>
+                )}
+
+                {!loadingService && !service && (
+                    <p className="error">
+                        Service not found. Please go back and select again.
+                    </p>
+                )}
+            </div>
+
+            {/* BOOKING FORM */}
             <div className="card" style={{ marginTop: 12 }}>
                 {error && <p className="error">{error}</p>}
-                {ok && <p style={{ color: "#7CFC9A" }}>{ok}</p>}
 
-                <form onSubmit={submit}>
+                <form onSubmit={handleSubmit}>
                     <label>
-                        <b>Service</b>
-                    </label>
-
-                    {loadingServices ? (
-                        <p>Loading services...</p>
-                    ) : (
-                        <select
-                            value={serviceId}
-                            onChange={(e) => setServiceId(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: 10,
-                                margin: "6px 0 12px",
-                                borderRadius: 8,
-                                border: "1px solid #333",
-                                background: "#0f1115",
-                                color: "#fff",
-                            }}
-                        >
-                            <option value="">-- Select a service --</option>
-                            {services.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                    {s.name} ({s.city}) - €{(s.base_price_cents / 100).toFixed(2)}
-                                </option>
-                            ))}
-                        </select>
-                    )}
-
-                    <label>
-                        <b>Requested time</b>
+                        <b>Requested time</b> (optional)
                     </label>
                     <input
                         type="datetime-local"
@@ -132,16 +128,18 @@ export default function NewBooking() {
                         <b>Problem description</b>
                     </label>
                     <input
-                        placeholder="e.g. Laptop not charging, fan noise..."
+                        placeholder="Describe the issue (e.g. laptop not charging)"
                         value={problemDescription}
                         onChange={(e) => setProblemDescription(e.target.value)}
                     />
 
-                    <button type="submit" disabled={!canSubmit}>
-                        {submitting ? "Creating..." : "Create booking"}
+                    <button type="submit" disabled={saving}>
+                        {saving ? "Creating..." : "Create booking"}
                     </button>
                 </form>
             </div>
         </div>
     );
 }
+
+

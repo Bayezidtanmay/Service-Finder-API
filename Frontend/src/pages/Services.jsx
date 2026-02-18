@@ -44,6 +44,8 @@ export default function Services() {
         <div className="container">
             <div className="row">
                 <h1>Services</h1>
+                <button onClick={() => nav("/bookings/me")}>My bookings</button>
+                <button onClick={() => nav("/bookings/new")}>Create booking</button>
                 <button onClick={handleLogout}>Logout</button>
             </div>
 
