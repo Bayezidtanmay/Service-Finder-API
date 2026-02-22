@@ -65,9 +65,13 @@ export default function MyBookings() {
 
                         <p>
                             <b>Status:</b>{" "}
-                            <span style={{ textTransform: "capitalize" }}>
-                                {b.status || "-"}
-                            </span>
+                            {b.status ? (
+                                <span className={`badge ${b.status}`}>
+                                    {b.status.replace("_", " ")}
+                                </span>
+                            ) : (
+                                "-"
+                            )}
                         </p>
 
                         <p>

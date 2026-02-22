@@ -44,9 +44,11 @@ export default function Services() {
         <div className="container">
             <div className="row">
                 <h1>Services</h1>
-                <button onClick={() => nav("/bookings/me")}>My bookings</button>
-                <button onClick={() => nav("/bookings/new")}>Create booking</button>
-                <button onClick={handleLogout}>Logout</button>
+                <div className="actions">
+                    <button className="ghost" onClick={() => nav("/bookings/me")}>My bookings</button>
+                    <button className="ghost" onClick={() => nav("/technician/bookings")}>Technician</button>
+                    <button className="danger" onClick={handleLogout}>Logout</button>
+                </div>
             </div>
 
             {loading && <p>Loading...</p>}
@@ -77,7 +79,7 @@ export default function Services() {
                         )}
 
                         <div className="row" style={{ marginTop: 12 }}>
-                            <button onClick={() => bookNow(s.id)}>Book now</button>
+                            <button className="primary" onClick={() => bookNow(s.id)}>Book now</button>
                         </div>
                     </div>
                 ))}
