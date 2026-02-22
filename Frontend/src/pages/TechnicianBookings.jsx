@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import Navbar from "../components/Navbar.jsx";
 
 const money = (cents) =>
     cents == null ? "-" : `€${(Number(cents) / 100).toFixed(2)}`;
 
 export default function TechnicianBookings() {
-    const nav = useNavigate();
-
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -34,7 +32,6 @@ export default function TechnicianBookings() {
         load();
     }, []);
 
-    // Split for UI clarity
     const { unassignedRequested, assignedToMe } = useMemo(() => {
         const unassignedRequested = [];
         const assignedToMe = [];
@@ -93,113 +90,168 @@ export default function TechnicianBookings() {
         }
     }
 
+    const customerName = (b) => b.user?.name || b.user?.email || "-";
+    const serviceName = (b) => b.service?.name || "Service";
+    const serviceCity = (b) => b.service?.city || "-";
+
     return (
-        <div className="container">
-            <div className="row">
-                <h1>Technician Dashboard</h1>
-                <button onClick={() => nav("/services")}>Back to services</button>
+        <>
+            <Navbar />
+
+            <div className="container">
+                <div className="row">
+                    <h1>Technician Dashboard</h1>
+                </div>
+
+                {loading && <p>Loading bookings...</p>}
+                {error && <p className="error">{error}</p>}
+
+                {!loading && !error && (
+                    <>
+                        {/* Unassigned requests */}
+                        <div className="card" style={{ marginTop: 16 }}>
+                            <div className="cardHeader">
+                                <div>
+                                    <h2 style={{ margin: 0 }}>Unassigned Requests</h2>
+                                    <div className="subtle">Bookings waiting for a technician to accept</div>
+                                </div>
+                                <span className="badge requested">
+                                    {unassignedRequested.length} pending
+                                </span>
+                            </div>
+
+                            <div className="spacer" />
+
+                            {unassignedRequested.length === 0 ? (
+                                <p>No unassigned requested bookings right now.</p>
+                            ) : (
+                                <div className="grid">
+                                    {unassignedRequested.map((b) => (
+                                        <div key={b.id} className="card">
+                                            <div className="cardHeader">
+                                                <div>
+                                                    <h3 style={{ marginBottom: 6 }}>{serviceName(b)}</h3>
+                                                    <div className="subtle">📍 {serviceCity(b)}</div>
+                                                </div>
+                                                <span className={`badge ${b.status}`}>
+                                                    {String(b.status || "-").replace("_", " ")}
+                                                </span>
+                                            </div>
+
+                                            <div className="spacer" />
+
+                                            <p>
+                                                <b>Customer:</b> {customerName(b)}
+                                            </p>
+                                            <p>
+                                                <b>Description:</b> {b.problem_description || "-"}
+                                            </p>
+
+                                            <div className="row" style={{ marginTop: 12 }}>
+                                                <button
+                                                    className="primary"
+                                                    onClick={() => acceptBooking(b.id)}
+                                                    disabled={savingId === b.id}
+                                                >
+                                                    {savingId === b.id ? "Accepting..." : "Accept"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Assigned bookings */}
+                        <div className="card" style={{ marginTop: 16 }}>
+                            <div className="cardHeader">
+                                <div>
+                                    <h2 style={{ margin: 0 }}>My Assigned Bookings</h2>
+                                    <div className="subtle">Update status and add a quote</div>
+                                </div>
+                                <span className="badge">{assignedToMe.length} items</span>
+                            </div>
+
+                            <div className="spacer" />
+
+                            {assignedToMe.length === 0 ? (
+                                <p>No assigned bookings yet.</p>
+                            ) : (
+                                <div className="grid">
+                                    {assignedToMe.map((b) => (
+                                        <div key={b.id} className="card">
+                                            <div className="cardHeader">
+                                                <div>
+                                                    <h3 style={{ marginBottom: 6 }}>{serviceName(b)}</h3>
+                                                    <div className="subtle">📍 {serviceCity(b)}</div>
+                                                </div>
+
+                                                <span className={`badge ${b.status}`}>
+                                                    {String(b.status || "-").replace("_", " ")}
+                                                </span>
+                                            </div>
+
+                                            <div className="spacer" />
+
+                                            <p>
+                                                <b>Customer:</b> {customerName(b)}
+                                            </p>
+
+                                            <p>
+                                                <b>Current quote:</b> {money(b.quote_cents)}
+                                            </p>
+
+                                            <p>
+                                                <b>Description:</b> {b.problem_description || "-"}
+                                            </p>
+
+                                            <div className="form">
+                                                <div>
+                                                    <label>Update status</label>
+                                                    <select
+                                                        value={statusById[b.id] ?? ""}
+                                                        onChange={(e) =>
+                                                            setStatusById((s) => ({ ...s, [b.id]: e.target.value }))
+                                                        }
+                                                    >
+                                                        <option value="">(keep same)</option>
+                                                        <option value="accepted">accepted</option>
+                                                        <option value="quoted">quoted</option>
+                                                        <option value="in_progress">in_progress</option>
+                                                        <option value="completed">completed</option>
+                                                        <option value="cancelled">cancelled</option>
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label>Set quote (€)</label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        placeholder="e.g. 49.00"
+                                                        value={quoteEurosById[b.id] ?? ""}
+                                                        onChange={(e) =>
+                                                            setQuoteEurosById((s) => ({ ...s, [b.id]: e.target.value }))
+                                                        }
+                                                    />
+                                                </div>
+
+                                                <button
+                                                    className="primary"
+                                                    onClick={() => updateBooking(b.id)}
+                                                    disabled={savingId === b.id}
+                                                >
+                                                    {savingId === b.id ? "Saving..." : "Save update"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
-
-            {loading && <p>Loading bookings...</p>}
-            {error && <p className="error">{error}</p>}
-
-            {!loading && !error && (
-                <>
-                    {/* Unassigned Requested */}
-                    <div className="card" style={{ marginTop: 16 }}>
-                        <h2 style={{ marginTop: 0 }}>Unassigned Requests</h2>
-                        {unassignedRequested.length === 0 ? (
-                            <p>No unassigned requested bookings right now.</p>
-                        ) : (
-                            <div className="grid">
-                                {unassignedRequested.map((b) => (
-                                    <div key={b.id} className="card">
-                                        <h3>{b.service?.name || "Service"}</h3>
-                                        <p><b>City:</b> {b.service?.city || "-"}</p>
-                                        <p><b>Customer:</b> {b.user?.name || b.user?.email || "-"}</p>
-                                        <p><b>Status:</b> {b.status}</p>
-                                        <p><b>Description:</b> {b.problem_description || "-"}</p>
-
-                                        <button
-                                            onClick={() => acceptBooking(b.id)}
-                                            disabled={savingId === b.id}
-                                        >
-                                            {savingId === b.id ? "Accepting..." : "Accept"}
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Assigned */}
-                    <div className="card" style={{ marginTop: 16 }}>
-                        <h2 style={{ marginTop: 0 }}>My Assigned Bookings</h2>
-
-                        {assignedToMe.length === 0 ? (
-                            <p>No assigned bookings yet.</p>
-                        ) : (
-                            <div className="grid">
-                                {assignedToMe.map((b) => (
-                                    <div key={b.id} className="card">
-                                        <h3>{b.service?.name || "Service"}</h3>
-
-                                        <p><b>City:</b> {b.service?.city || "-"}</p>
-                                        <p><b>Customer:</b> {b.user?.name || b.user?.email || "-"}</p>
-
-                                        <p style={{ marginBottom: 6 }}>
-                                            <b>Status:</b>{" "}
-                                            <span style={{ textTransform: "capitalize" }}>
-                                                {b.status}
-                                            </span>
-                                        </p>
-
-                                        <p style={{ marginBottom: 6 }}>
-                                            <b>Current quote:</b> {money(b.quote_cents)}
-                                        </p>
-
-                                        <p><b>Description:</b> {b.problem_description || "-"}</p>
-
-                                        <label>Update status</label>
-                                        <select
-                                            value={statusById[b.id] ?? ""}
-                                            onChange={(e) =>
-                                                setStatusById((s) => ({ ...s, [b.id]: e.target.value }))
-                                            }
-                                        >
-                                            <option value="">(keep same)</option>
-                                            <option value="accepted">accepted</option>
-                                            <option value="quoted">quoted</option>
-                                            <option value="in_progress">in_progress</option>
-                                            <option value="completed">completed</option>
-                                            <option value="cancelled">cancelled</option>
-                                        </select>
-
-                                        <label style={{ marginTop: 10 }}>Set quote (€)</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            placeholder="e.g. 49.00"
-                                            value={quoteEurosById[b.id] ?? ""}
-                                            onChange={(e) =>
-                                                setQuoteEurosById((s) => ({ ...s, [b.id]: e.target.value }))
-                                            }
-                                        />
-
-                                        <button
-                                            onClick={() => updateBooking(b.id)}
-                                            disabled={savingId === b.id}
-                                            style={{ marginTop: 10 }}
-                                        >
-                                            {savingId === b.id ? "Saving..." : "Save update"}
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </>
-            )}
-        </div>
+        </>
     );
 }

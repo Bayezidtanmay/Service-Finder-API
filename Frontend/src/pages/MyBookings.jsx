@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import Navbar from "../components/Navbar.jsx";
 
 const money = (cents) =>
     cents == null ? "-" : `€${(Number(cents) / 100).toFixed(2)}`;
@@ -12,8 +12,6 @@ const fmtDate = (value) => {
 };
 
 export default function MyBookings() {
-    const nav = useNavigate();
-
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -36,59 +34,62 @@ export default function MyBookings() {
     }, []);
 
     return (
-        <div className="container">
-            <div className="row">
-                <h1>My Bookings</h1>
-                <button onClick={() => nav("/services")}>Back to services</button>
-            </div>
+        <>
+            <Navbar />
 
-            {loading && <p>Loading bookings...</p>}
-            {error && <p className="error">{error}</p>}
-
-            {!loading && !error && bookings.length === 0 && (
-                <div className="card">
-                    <p>You haven’t created any bookings yet.</p>
-                    <button onClick={() => nav("/services")}>Book a service</button>
+            <div className="container">
+                <div className="row">
+                    <h1>My Bookings</h1>
                 </div>
-            )}
 
-            <div className="grid">
-                {bookings.map((b) => (
-                    <div key={b.id} className="card">
-                        <h3>{b.service?.name || "Service"}</h3>
+                {loading && <p>Loading bookings...</p>}
+                {error && <p className="error">{error}</p>}
 
-                        {b.service?.city && (
-                            <p>
-                                <b>City:</b> {b.service.city}
-                            </p>
-                        )}
-
-                        <p>
-                            <b>Status:</b>{" "}
-                            {b.status ? (
-                                <span className={`badge ${b.status}`}>
-                                    {b.status.replace("_", " ")}
-                                </span>
-                            ) : (
-                                "-"
-                            )}
-                        </p>
-
-                        <p>
-                            <b>Requested time:</b> {fmtDate(b.requested_time)}
-                        </p>
-
-                        <p>
-                            <b>Problem:</b> {b.problem_description?.trim() || "-"}
-                        </p>
-
-                        <p>
-                            <b>Quote:</b> {money(b.quote_cents)}
-                        </p>
+                {!loading && !error && bookings.length === 0 && (
+                    <div className="card">
+                        <p>You haven’t created any bookings yet.</p>
+                        <p className="subtle">Go to Services to create your first booking.</p>
                     </div>
-                ))}
+                )}
+
+                <div className="grid">
+                    {bookings.map((b) => (
+                        <div key={b.id} className="card">
+                            <div className="cardHeader">
+                                <div>
+                                    <h3 style={{ marginBottom: 6 }}>{b.service?.name || "Service"}</h3>
+                                    <div className="subtle">
+                                        {b.service?.city ? `📍 ${b.service.city}` : "📍 Location not set"}
+                                    </div>
+                                </div>
+
+                                {b.status ? (
+                                    <span className={`badge ${b.status}`}>
+                                        {b.status.replace("_", " ")}
+                                    </span>
+                                ) : (
+                                    <span className="badge">-</span>
+                                )}
+                            </div>
+
+                            <div className="spacer" />
+
+                            <p>
+                                <b>Requested time:</b> {fmtDate(b.requested_time)}
+                            </p>
+
+                            <p>
+                                <b>Problem:</b> {b.problem_description?.trim() || "-"}
+                            </p>
+
+                            <p>
+                                <b>Quote:</b> {money(b.quote_cents)}
+                            </p>
+                        </div>
+                    ))}
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 

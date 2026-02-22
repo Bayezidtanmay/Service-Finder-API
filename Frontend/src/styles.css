@@ -254,3 +254,116 @@
   .stack{ display:flex; flex-direction:column; gap: 10px; }
   .spacer{ height: 10px; }
   
+
+  /* ===============================
+   Top Navigation Bar
+   =============================== */
+
+.navWrap{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(10px);
+  background: rgba(7,10,18,.55);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.navBar{
+  width: min(1100px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 14px 0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.navLeft{
+  display:flex;
+  align-items:center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  cursor:pointer;
+  user-select:none;
+  white-space: nowrap;
+}
+
+.brandDot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  box-shadow: 0 0 0 4px rgba(79,70,229,.18);
+}
+
+.navLinks{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.navLink{
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: var(--muted);
+  transition: background .12s ease, border-color .12s ease, color .12s ease;
+  text-decoration: none;
+}
+
+.navLink:hover{
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.10);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.navLink.active{
+  background: rgba(79,70,229,.16);
+  border-color: rgba(79,70,229,.35);
+  color: var(--text);
+}
+
+.navRight{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content:flex-end;
+}
+
+.whoami{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.06);
+}
+
+.whoDot{
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.35);
+}
+
+.whoText{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Give main pages some top spacing now that nav exists */
+.container{
+  padding-top: 28px;
+}
