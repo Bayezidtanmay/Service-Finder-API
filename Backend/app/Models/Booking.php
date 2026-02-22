@@ -9,11 +9,6 @@ class Booking extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'user_id',
         'service_id',
@@ -24,27 +19,23 @@ class Booking extends Model
         'quote_cents',
     ];
 
-    /**
-     * Booking belongs to the user who created it.
-     */
+    protected $casts = [
+        'requested_time' => 'datetime',
+        'quote_cents' => 'integer',
+    ];
+
     public function user()
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
-    /**
-     * Booking belongs to a service.
-     */
     public function service()
     {
-        return $this->belongsTo(\App\Models\Service::class);
+        return $this->belongsTo(Service::class);
     }
 
-    /**
-     * Booking belongs to a technician (user).
-     */
     public function technician()
     {
-        return $this->belongsTo(\App\Models\User::class, 'technician_id');
+        return $this->belongsTo(User::class, 'technician_id');
     }
 }

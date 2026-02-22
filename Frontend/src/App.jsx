@@ -5,6 +5,8 @@ import Services from "./pages/Services.jsx";
 import NewBooking from "./pages/NewBooking.jsx";
 import MyBookings from "./pages/MyBookings.jsx";
 import { useAuth } from "./auth/AuthContext.jsx";
+import TechnicianBookings from "./pages/TechnicianBookings.jsx";
+
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -57,6 +59,16 @@ export default function App() {
           </Protected>
         }
       />
+
+      <Route
+        path="/technician/bookings"
+        element={
+          <Protected>
+            <TechnicianBookings />
+          </Protected>
+        }
+      />
+
 
       {/* Fallback */}
       <Route path="*" element={<div className="container">Not Found</div>} />
