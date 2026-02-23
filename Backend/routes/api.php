@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
     | ADMIN routes
     |--------------------------------------------------------------------------
     */
+
     Route::middleware('role:admin')->group(function () {
         // Manage services
         Route::post('/services', [ServiceController::class, 'store']);
@@ -65,5 +67,6 @@ Route::middleware('auth:sanctum')->group(function () {
         // Manage bookings
         Route::get('/admin/bookings', [BookingController::class, 'index']);
         Route::patch('/admin/bookings/{booking}', [BookingController::class, 'adminUpdate']);
+        Route::get('/admin/technicians', [AdminController::class, 'technicians'])->middleware('role:admin');
     });
 });

@@ -48,6 +48,15 @@ export default function Navbar() {
                                 Technician
                             </NavLink>
                         )}
+
+                        {user?.role === "admin" && (
+                            <NavLink
+                                to="/admin"
+                                className={({ isActive }) => "navLink" + (isActive ? " active" : "")}
+                            >
+                                Admin
+                            </NavLink>
+                        )}
                     </nav>
                 </div>
 

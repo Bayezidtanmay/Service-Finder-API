@@ -6,7 +6,7 @@ import NewBooking from "./pages/NewBooking.jsx";
 import MyBookings from "./pages/MyBookings.jsx";
 import { useAuth } from "./auth/AuthContext.jsx";
 import TechnicianBookings from "./pages/TechnicianBookings.jsx";
-
+import AdminDashboard from "./pages/AdminDashboard.jsx";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -65,6 +65,15 @@ export default function App() {
         element={
           <Protected>
             <TechnicianBookings />
+          </Protected>
+        }
+      />
+
+      <Route
+        path="/admin"
+        element={
+          <Protected>
+            <AdminDashboard />
           </Protected>
         }
       />
