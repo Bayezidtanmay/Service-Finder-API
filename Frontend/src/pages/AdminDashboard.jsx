@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { api } from "../api";
 import Navbar from "../components/Navbar.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
+import Toast from "../components/Toast.jsx";
 
 const money = (cents) =>
     cents == null ? "-" : `€${(Number(cents) / 100).toFixed(2)}`;
@@ -30,13 +31,22 @@ export default function AdminDashboard() {
     const [q, setQ] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [assignFilter, setAssignFilter] = useState("all"); // all | assigned | unassigned
-    const [techFilter, setTechFilter] = useState(""); // technician id as string
+    const [techFilter, setTechFilter] = useState(""); // technician id
 
     // local edits per booking
     const [techById, setTechById] = useState({});
     const [statusById, setStatusById] = useState({});
     const [quoteById, setQuoteById] = useState({});
     const [savingId, setSavingId] = useState(null);
+
+    // Toasts
+    const [toasts, setToasts] = useState([]);
+    const pushToast = useCallback((t) => {
+        setToasts((prev) => [...prev, { id: crypto.randomUUID(), ...t }]);
+    }, []);
+    const removeToast = useCallback((id) => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, []);
 
     async function load() {
         try {
@@ -87,20 +97,16 @@ export default function AdminDashboard() {
             const status = b.status || "requested";
             const assigned = Boolean(b.technician_id);
 
-            // status filter
             if (statusFilter && status !== statusFilter) return false;
 
-            // assigned filter
             if (assignFilter === "assigned" && !assigned) return false;
             if (assignFilter === "unassigned" && assigned) return false;
 
-            // technician filter
             if (techFilter) {
                 const tid = String(b.technician_id || "");
                 if (tid !== String(techFilter)) return false;
             }
 
-            // search query (id, service name, city, customer name/email)
             if (query) {
                 const hay = [
                     b.id,
@@ -148,6 +154,7 @@ export default function AdminDashboard() {
         const quote_cents =
             quoteEuros === undefined ? undefined : toCents(quoteEuros);
 
+        // Build payload only with fields user touched
         const payload = {};
         if (techById[id] !== undefined) payload.technician_id = technician_id;
         if (statusById[id] !== undefined) payload.status = status;
@@ -159,9 +166,20 @@ export default function AdminDashboard() {
                 method: "PATCH",
                 body: JSON.stringify(payload),
             });
+
+            pushToast({
+                type: "success",
+                title: "Saved",
+                message: `Booking #${id} updated`,
+            });
+
             await load();
         } catch (e) {
-            alert(e?.message || "Failed to update booking");
+            pushToast({
+                type: "error",
+                title: "Update failed",
+                message: e?.message || "Could not update booking",
+            });
         } finally {
             setSavingId(null);
         }
@@ -193,12 +211,19 @@ export default function AdminDashboard() {
     return (
         <>
             <Navbar />
+            <Toast toasts={toasts} remove={removeToast} />
 
             <div className="container">
                 <div className="row">
                     <h1>Admin Dashboard</h1>
                     <div className="actions">
-                        <button className="ghost" onClick={load}>
+                        <button
+                            className="ghost"
+                            onClick={() => {
+                                load();
+                                pushToast({ type: "info", title: "Refreshing", message: "Reloading data…" });
+                            }}
+                        >
                             Refresh
                         </button>
                     </div>
@@ -209,7 +234,7 @@ export default function AdminDashboard() {
 
                 {!loading && !error && (
                     <>
-                        {/* Overview stats (global) */}
+                        {/* Overview stats */}
                         <div className="grid" style={{ marginTop: 0 }}>
                             <div className="card">
                                 <div className="subtle">Total bookings</div>
@@ -265,7 +290,13 @@ export default function AdminDashboard() {
                                     />
                                 </div>
 
-                                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+                                <div
+                                    style={{
+                                        display: "grid",
+                                        gap: 12,
+                                        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                                    }}
+                                >
                                     <div>
                                         <label>Status</label>
                                         <select
@@ -312,13 +343,11 @@ export default function AdminDashboard() {
 
                                 {/* Filtered stats */}
                                 <div className="row" style={{ marginTop: 2 }}>
-                                    <div className="actions">
+                                    <div className="actions" style={{ flexWrap: "wrap" }}>
                                         <span className="badge requested">
                                             requested: {filteredStats.requested}
                                         </span>
-                                        <span className="badge quoted">
-                                            quoted: {filteredStats.quoted}
-                                        </span>
+                                        <span className="badge quoted">quoted: {filteredStats.quoted}</span>
                                         <span className="badge accepted">
                                             accepted: {filteredStats.accepted}
                                         </span>
