@@ -29,24 +29,33 @@ class BookingController extends Controller
             'service_id' => ['required', 'exists:services,id'],
             'requested_time' => ['nullable', 'date'],
             'problem_description' => ['nullable', 'string'],
+
+            // NEW: image file
+            'problem_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'], // 5MB
         ]);
+
+        $path = null;
+        if ($request->hasFile('problem_photo')) {
+            $path = $request->file('problem_photo')->store('bookings', 'public');
+        }
 
         $booking = Booking::create([
             'user_id' => $request->user()->id,
             'service_id' => $data['service_id'],
             'requested_time' => $data['requested_time'] ?? null,
             'problem_description' => $data['problem_description'] ?? null,
+            'problem_photo_path' => $path,
             'status' => 'requested',
         ]);
 
-        // timeline event: created
+        // timeline event
         $this->logEvent($booking, $request, [
             'type' => 'created',
             'to_status' => 'requested',
-            'message' => 'Booking created',
+            'message' => $path ? 'Booking created (photo attached)' : 'Booking created',
         ]);
 
-        return $booking;
+        return $booking->load(['service', 'user', 'technician']);
     }
 
     // USER: list my bookings

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Booking extends Model
 {
@@ -17,12 +18,21 @@ class Booking extends Model
         'requested_time',
         'problem_description',
         'quote_cents',
+        'problem_photo_path',
     ];
 
     protected $casts = [
         'requested_time' => 'datetime',
         'quote_cents' => 'integer',
     ];
+
+    protected $appends = ['problem_photo_url'];
+
+    public function getProblemPhotoUrlAttribute()
+    {
+        if (!$this->problem_photo_path) return null;
+        return Storage::url($this->problem_photo_path);
+    }
 
     public function user()
     {

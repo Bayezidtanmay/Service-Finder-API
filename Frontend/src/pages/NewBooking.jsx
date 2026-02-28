@@ -1,72 +1,69 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
-
-const money = (cents) =>
-    cents == null ? "-" : `€${(Number(cents) / 100).toFixed(2)}`;
 
 export default function NewBooking() {
     const nav = useNavigate();
     const [params] = useSearchParams();
-
-    const serviceId = useMemo(() => {
-        const v = params.get("service_id");
-        return v ? Number(v) : null;
-    }, [params]);
+    const serviceId = params.get("service_id");
 
     const [service, setService] = useState(null);
-    const [loadingService, setLoadingService] = useState(true);
-
     const [requestedTime, setRequestedTime] = useState("");
     const [problemDescription, setProblemDescription] = useState("");
+
+    // NEW: file state
+    const [photoFile, setPhotoFile] = useState(null);
+
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
-    // Load service info
     useEffect(() => {
-        if (!serviceId) {
-            setLoadingService(false);
-            return;
-        }
-
-        (async () => {
+        async function loadService() {
             try {
-                setLoadingService(true);
+                setLoading(true);
+                setError("");
+
                 const services = await api("/services");
-                const found = services.find((s) => s.id === serviceId);
+                const found = (Array.isArray(services) ? services : []).find(
+                    (s) => String(s.id) === String(serviceId)
+                );
                 setService(found || null);
             } catch (e) {
-                setError("Failed to load service information");
+                setError(e?.message || "Failed to load service");
             } finally {
-                setLoadingService(false);
+                setLoading(false);
             }
-        })();
+        }
+
+        if (serviceId) loadService();
+        else {
+            setLoading(false);
+            setError("Missing service_id in URL");
+        }
     }, [serviceId]);
 
-    async function handleSubmit(e) {
+    async function submit(e) {
         e.preventDefault();
-        setError("");
-
-        if (!serviceId) {
-            setError("Missing service. Please go back and select a service again.");
-            return;
-        }
 
         try {
             setSaving(true);
+            setError("");
+
+            const fd = new FormData();
+            fd.append("service_id", serviceId);
+            if (requestedTime) fd.append("requested_time", requestedTime);
+            if (problemDescription) fd.append("problem_description", problemDescription);
+            if (photoFile) fd.append("problem_photo", photoFile);
 
             await api("/bookings", {
                 method: "POST",
-                body: JSON.stringify({
-                    service_id: serviceId,
-                    requested_time: requestedTime || null,
-                    problem_description: problemDescription || null,
-                }),
+                body: fd, // IMPORTANT: FormData
             });
 
             nav("/bookings/me");
-        } catch (err) {
-            setError(err.message || "Booking failed");
+        } catch (e) {
+            setError(e?.message || "Failed to create booking");
         } finally {
             setSaving(false);
         }
@@ -76,68 +73,60 @@ export default function NewBooking() {
         <div className="container">
             <div className="row">
                 <h1>New Booking</h1>
-                <button type="button" onClick={() => nav("/services")}>
+                <button className="ghost" onClick={() => nav("/services")}>
                     Back
                 </button>
             </div>
 
-            {/* SERVICE INFO */}
-            <div className="card">
-                {loadingService && <p>Loading service…</p>}
+            {loading && <p>Loading...</p>}
+            {error && <p className="error">{error}</p>}
 
-                {!loadingService && service && (
-                    <>
-                        <h2 style={{ marginTop: 0 }}>{service.name}</h2>
+            {!loading && !error && (
+                <div className="card">
+                    <h2 style={{ marginTop: 0 }}>
+                        {service?.name || "Service"}{" "}
+                        <span className="subtle">{service?.city ? `• ${service.city}` : ""}</span>
+                    </h2>
 
-                        {service.city && (
-                            <p>
-                                <b>City:</b> {service.city}
-                            </p>
-                        )}
+                    <form onSubmit={submit} className="form">
+                        <div>
+                            <label>Requested time (optional)</label>
+                            <input
+                                type="datetime-local"
+                                value={requestedTime}
+                                onChange={(e) => setRequestedTime(e.target.value)}
+                            />
+                        </div>
 
-                        {"base_price_cents" in service && (
-                            <p>
-                                <b>Base price:</b> {money(service.base_price_cents)}
-                            </p>
-                        )}
-                    </>
-                )}
+                        <div>
+                            <label>Problem description</label>
+                            <input
+                                value={problemDescription}
+                                onChange={(e) => setProblemDescription(e.target.value)}
+                                placeholder="Describe the issue"
+                            />
+                        </div>
 
-                {!loadingService && !service && (
-                    <p className="error">
-                        Service not found. Please go back and select again.
-                    </p>
-                )}
-            </div>
+                        <div>
+                            <label>Problem photo (optional)</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                            />
+                            {photoFile && (
+                                <div className="subtle" style={{ marginTop: 6 }}>
+                                    Selected: <b>{photoFile.name}</b>
+                                </div>
+                            )}
+                        </div>
 
-            {/* BOOKING FORM */}
-            <div className="card" style={{ marginTop: 12 }}>
-                {error && <p className="error">{error}</p>}
-
-                <form onSubmit={handleSubmit}>
-                    <label>
-                        <b>Requested time</b> (optional)
-                    </label>
-                    <input
-                        type="datetime-local"
-                        value={requestedTime}
-                        onChange={(e) => setRequestedTime(e.target.value)}
-                    />
-
-                    <label>
-                        <b>Problem description</b>
-                    </label>
-                    <input
-                        placeholder="Describe the issue (e.g. laptop not charging)"
-                        value={problemDescription}
-                        onChange={(e) => setProblemDescription(e.target.value)}
-                    />
-
-                    <button type="submit" disabled={saving}>
-                        {saving ? "Creating..." : "Create booking"}
-                    </button>
-                </form>
-            </div>
+                        <button className="primary" disabled={saving}>
+                            {saving ? "Creating..." : "Create booking"}
+                        </button>
+                    </form>
+                </div>
+            )}
         </div>
     );
 }

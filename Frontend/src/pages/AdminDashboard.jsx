@@ -185,13 +185,11 @@ export default function AdminDashboard() {
     }, [filtered]);
 
     async function save(id) {
-        const technician_id =
-            techById[id] === "" ? null : Number(techById[id] ?? "");
+        const technician_id = techById[id] === "" ? null : Number(techById[id] ?? "");
         const status = statusById[id] || null;
 
         const quoteEuros = quoteById[id];
-        const quote_cents =
-            quoteEuros === undefined ? undefined : toCents(quoteEuros);
+        const quote_cents = quoteEuros === undefined ? undefined : toCents(quoteEuros);
 
         const payload = {};
         if (techById[id] !== undefined) payload.technician_id = technician_id;
@@ -304,8 +302,12 @@ export default function AdminDashboard() {
                 <div className="row">
                     <h1>Admin Dashboard</h1>
                     <div className="actions">
-                        <button className="ghost" onClick={load}>Refresh</button>
-                        <button className="ghost" onClick={clearFilters}>Clear filters</button>
+                        <button className="ghost" onClick={load}>
+                            Refresh
+                        </button>
+                        <button className="ghost" onClick={clearFilters}>
+                            Clear filters
+                        </button>
                     </div>
                 </div>
 
@@ -366,10 +368,19 @@ export default function AdminDashboard() {
                                     />
                                 </div>
 
-                                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+                                <div
+                                    style={{
+                                        display: "grid",
+                                        gap: 12,
+                                        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                                    }}
+                                >
                                     <div>
                                         <label>Status</label>
-                                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                                        <select
+                                            value={statusFilter}
+                                            onChange={(e) => setStatusFilter(e.target.value)}
+                                        >
                                             <option value="">All</option>
                                             <option value="requested">requested</option>
                                             <option value="accepted">accepted</option>
@@ -382,7 +393,10 @@ export default function AdminDashboard() {
 
                                     <div>
                                         <label>Assignment</label>
-                                        <select value={assignFilter} onChange={(e) => setAssignFilter(e.target.value)}>
+                                        <select
+                                            value={assignFilter}
+                                            onChange={(e) => setAssignFilter(e.target.value)}
+                                        >
                                             <option value="all">All</option>
                                             <option value="assigned">Assigned</option>
                                             <option value="unassigned">Unassigned</option>
@@ -391,7 +405,10 @@ export default function AdminDashboard() {
 
                                     <div>
                                         <label>Technician</label>
-                                        <select value={techFilter} onChange={(e) => setTechFilter(e.target.value)}>
+                                        <select
+                                            value={techFilter}
+                                            onChange={(e) => setTechFilter(e.target.value)}
+                                        >
                                             <option value="">All</option>
                                             {techs.map((t) => (
                                                 <option key={t.id} value={t.id}>
@@ -427,22 +444,48 @@ export default function AdminDashboard() {
                                                 <div className="cardHeader">
                                                     <div>
                                                         <h3 style={{ marginBottom: 6 }}>
-                                                            {b.service?.name || "Service"} <span className="subtle">#{b.id}</span>
+                                                            {b.service?.name || "Service"}{" "}
+                                                            <span className="subtle">#{b.id}</span>
                                                         </h3>
                                                         <div className="subtle">
-                                                            📍 {b.service?.city || "-"} • 👤 {b.user?.name || b.user?.email || "-"}
+                                                            📍 {b.service?.city || "-"} • 👤{" "}
+                                                            {b.user?.name || b.user?.email || "-"}
                                                         </div>
                                                     </div>
-                                                    <span className={`badge ${status}`}>{status.replace("_", " ")}</span>
+                                                    <span className={`badge ${status}`}>
+                                                        {status.replace("_", " ")}
+                                                    </span>
                                                 </div>
 
                                                 <div className="spacer" />
 
-                                                <p><b>Tech:</b> {b.technician?.name || b.technician?.email || "Not assigned"}</p>
-                                                <p><b>Quote:</b> {money(b.quote_cents)}</p>
-                                                <p><b>Problem:</b> {b.problem_description || "-"}</p>
+                                                <p>
+                                                    <b>Tech:</b>{" "}
+                                                    {b.technician?.name || b.technician?.email || "Not assigned"}
+                                                </p>
+                                                <p>
+                                                    <b>Quote:</b> {money(b.quote_cents)}
+                                                </p>
+                                                <p>
+                                                    <b>Problem:</b> {b.problem_description || "-"}
+                                                </p>
 
-                                                <div className="form">
+                                                {/* ✅ NEW: show problem photo */}
+                                                {b.problem_photo_url && (
+                                                    <div style={{ marginTop: 10 }}>
+                                                        <img
+                                                            src={`http://127.0.0.1:8000${b.problem_photo_url}`}
+                                                            alt="Problem"
+                                                            style={{
+                                                                width: "100%",
+                                                                borderRadius: 12,
+                                                                border: "1px solid rgba(255,255,255,.08)",
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <div className="form" style={{ marginTop: 12 }}>
                                                     <div>
                                                         <label>Assign technician</label>
                                                         <select

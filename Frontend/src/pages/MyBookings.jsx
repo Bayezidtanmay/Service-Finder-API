@@ -122,10 +122,27 @@ export default function MyBookings() {
                             <p>
                                 <b>Requested time:</b> {fmtDate(b.requested_time)}
                             </p>
+
                             <p>
                                 <b>Problem:</b> {b.problem_description?.trim() || "-"}
                             </p>
-                            <p>
+
+                            {/* ✅ NEW: show uploaded problem photo */}
+                            {b.problem_photo_url && (
+                                <div style={{ marginTop: 10 }}>
+                                    <img
+                                        src={`http://127.0.0.1:8000${b.problem_photo_url}`}
+                                        alt="Problem"
+                                        style={{
+                                            width: "100%",
+                                            borderRadius: 12,
+                                            border: "1px solid rgba(255,255,255,.08)",
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            <p style={{ marginTop: 10 }}>
                                 <b>Quote:</b> {money(b.quote_cents)}
                             </p>
 

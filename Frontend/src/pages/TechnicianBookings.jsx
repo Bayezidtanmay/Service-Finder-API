@@ -7,6 +7,7 @@ const money = (cents) =>
     cents == null ? "-" : `€${(Number(cents) / 100).toFixed(2)}`;
 
 const norm = (s) => String(s || "").toLowerCase().trim();
+
 const fmtEventTime = (value) => {
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? "" : d.toLocaleString();
@@ -290,6 +291,21 @@ export default function TechnicianBookings() {
                     <b>Description:</b> {b.problem_description || "-"}
                 </p>
 
+                {/* ✅ NEW: show problem photo */}
+                {b.problem_photo_url && (
+                    <div style={{ marginTop: 10 }}>
+                        <img
+                            src={`http://127.0.0.1:8000${b.problem_photo_url}`}
+                            alt="Problem"
+                            style={{
+                                width: "100%",
+                                borderRadius: 12,
+                                border: "1px solid rgba(255,255,255,.08)",
+                            }}
+                        />
+                    </div>
+                )}
+
                 {mode === "unassigned" ? (
                     <div className="row" style={{ marginTop: 12 }}>
                         <button
@@ -306,7 +322,7 @@ export default function TechnicianBookings() {
                     </div>
                 ) : (
                     <>
-                        <p>
+                        <p style={{ marginTop: 10 }}>
                             <b>Current quote:</b> {money(b.quote_cents)}
                         </p>
 
@@ -372,8 +388,12 @@ export default function TechnicianBookings() {
                 <div className="row">
                     <h1>Technician Dashboard</h1>
                     <div className="actions">
-                        <button className="ghost" onClick={load}>Refresh</button>
-                        <button className="ghost" onClick={clearFilters}>Clear filters</button>
+                        <button className="ghost" onClick={load}>
+                            Refresh
+                        </button>
+                        <button className="ghost" onClick={clearFilters}>
+                            Clear filters
+                        </button>
                     </div>
                 </div>
 
@@ -402,7 +422,13 @@ export default function TechnicianBookings() {
                                     />
                                 </div>
 
-                                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+                                <div
+                                    style={{
+                                        display: "grid",
+                                        gap: 12,
+                                        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                                    }}
+                                >
                                     <div>
                                         <label>Bucket</label>
                                         <select value={bucket} onChange={(e) => setBucket(e.target.value)}>
@@ -414,7 +440,10 @@ export default function TechnicianBookings() {
 
                                     <div>
                                         <label>Status</label>
-                                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                                        <select
+                                            value={statusFilter}
+                                            onChange={(e) => setStatusFilter(e.target.value)}
+                                        >
                                             <option value="">All</option>
                                             <option value="requested">requested</option>
                                             <option value="accepted">accepted</option>
@@ -444,12 +473,14 @@ export default function TechnicianBookings() {
                         {filtered.length === 0 ? (
                             <div className="card" style={{ marginTop: 16 }}>
                                 <p>No bookings match your filters.</p>
-                                <button className="ghost" onClick={clearFilters}>Clear filters</button>
+                                <button className="ghost" onClick={clearFilters}>
+                                    Clear filters
+                                </button>
                             </div>
                         ) : (
                             <div className="grid" style={{ marginTop: 16 }}>
                                 {filtered.map((b) =>
-                                    (!b.technician_id && (b.status || "requested") === "requested")
+                                    !b.technician_id && (b.status || "requested") === "requested"
                                         ? renderCard(b, "unassigned")
                                         : renderCard(b, "assigned")
                                 )}
