@@ -7,6 +7,10 @@ const money = (cents) =>
     cents == null ? "-" : `€${(Number(cents) / 100).toFixed(2)}`;
 
 const norm = (s) => String(s || "").toLowerCase().trim();
+const fmtEventTime = (value) => {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? "" : d.toLocaleString();
+};
 
 export default function TechnicianBookings() {
     const [bookings, setBookings] = useState([]);
@@ -15,7 +19,7 @@ export default function TechnicianBookings() {
 
     // filters
     const [q, setQ] = useState("");
-    const [statusFilter, setStatusFilter] = useState(""); // "", requested, accepted...
+    const [statusFilter, setStatusFilter] = useState("");
     const [bucket, setBucket] = useState("all"); // all | unassigned | assigned
     const [sort, setSort] = useState("newest"); // newest | oldest
 
@@ -23,6 +27,11 @@ export default function TechnicianBookings() {
     const [quoteEurosById, setQuoteEurosById] = useState({});
     const [statusById, setStatusById] = useState({});
     const [savingId, setSavingId] = useState(null);
+
+    // timeline state
+    const [openTimelineId, setOpenTimelineId] = useState(null);
+    const [eventsByBookingId, setEventsByBookingId] = useState({});
+    const [eventsLoadingId, setEventsLoadingId] = useState(null);
 
     // Toasts
     const [toasts, setToasts] = useState([]);
@@ -50,15 +59,44 @@ export default function TechnicianBookings() {
         load();
     }, []);
 
+    async function toggleTimeline(bookingId) {
+        if (openTimelineId === bookingId) {
+            setOpenTimelineId(null);
+            return;
+        }
+
+        setOpenTimelineId(bookingId);
+
+        // cached?
+        if (eventsByBookingId[bookingId]) return;
+
+        try {
+            setEventsLoadingId(bookingId);
+            const events = await api(`/bookings/${bookingId}/events`);
+            setEventsByBookingId((prev) => ({
+                ...prev,
+                [bookingId]: Array.isArray(events) ? events : [],
+            }));
+        } catch (e) {
+            setEventsByBookingId((prev) => ({ ...prev, [bookingId]: [] }));
+            pushToast({
+                type: "error",
+                title: "Timeline failed",
+                message: e?.message || "Could not load timeline",
+            });
+        } finally {
+            setEventsLoadingId(null);
+        }
+    }
+
+    // Split for UI clarity
     const { unassignedRequested, assignedToMe } = useMemo(() => {
         const unassignedRequested = [];
         const assignedToMe = [];
         for (const b of bookings) {
-            if (!b.technician_id && (b.status || "requested") === "requested") {
+            if (!b.technician_id && (b.status || "requested") === "requested")
                 unassignedRequested.push(b);
-            } else {
-                assignedToMe.push(b);
-            }
+            else assignedToMe.push(b);
         }
         return { unassignedRequested, assignedToMe };
     }, [bookings]);
@@ -74,7 +112,6 @@ export default function TechnicianBookings() {
 
         let list = allForFiltering.filter((b) => {
             const status = b.status || "requested";
-
             if (statusFilter && status !== statusFilter) return false;
 
             if (query) {
@@ -91,7 +128,6 @@ export default function TechnicianBookings() {
                     .join(" | ");
                 if (!hay.includes(query)) return false;
             }
-
             return true;
         });
 
@@ -111,10 +147,18 @@ export default function TechnicianBookings() {
                 method: "PATCH",
                 body: JSON.stringify({ action: "accept" }),
             });
-            pushToast({ type: "success", title: "Accepted", message: `Booking #${id} accepted` });
+            pushToast({
+                type: "success",
+                title: "Accepted",
+                message: `Booking #${id} accepted`,
+            });
             await load();
         } catch (e) {
-            pushToast({ type: "error", title: "Failed", message: e.message || "Could not accept booking" });
+            pushToast({
+                type: "error",
+                title: "Failed",
+                message: e.message || "Could not accept booking",
+            });
         } finally {
             setSavingId(null);
         }
@@ -128,7 +172,11 @@ export default function TechnicianBookings() {
         if (quoteEuros !== undefined && quoteEuros !== "") {
             const n = Number(quoteEuros);
             if (Number.isNaN(n) || n < 0) {
-                pushToast({ type: "error", title: "Invalid quote", message: "Quote must be a number (>= 0)" });
+                pushToast({
+                    type: "error",
+                    title: "Invalid quote",
+                    message: "Quote must be a number (>= 0)",
+                });
                 return;
             }
             quote_cents = Math.round(n * 100);
@@ -144,10 +192,18 @@ export default function TechnicianBookings() {
                 method: "PATCH",
                 body: JSON.stringify(payload),
             });
-            pushToast({ type: "success", title: "Saved", message: `Booking #${id} updated` });
+            pushToast({
+                type: "success",
+                title: "Saved",
+                message: `Booking #${id} updated`,
+            });
             await load();
         } catch (e) {
-            pushToast({ type: "error", title: "Failed", message: e.message || "Could not update booking" });
+            pushToast({
+                type: "error",
+                title: "Failed",
+                message: e.message || "Could not update booking",
+            });
         } finally {
             setSavingId(null);
         }
@@ -160,8 +216,59 @@ export default function TechnicianBookings() {
         setSort("newest");
     };
 
+    const Timeline = ({ bookingId }) => {
+        const open = openTimelineId === bookingId;
+        if (!open) return null;
+
+        const events = eventsByBookingId[bookingId] || [];
+
+        return (
+            <div className="timelineWrap">
+                {eventsLoadingId === bookingId ? (
+                    <p className="subtle">Loading timeline...</p>
+                ) : events.length === 0 ? (
+                    <p className="subtle">No timeline events yet.</p>
+                ) : (
+                    <div className="timeline">
+                        {events.map((ev) => (
+                            <div key={ev.id} className="timelineItem">
+                                <div className={`timelineDot ${ev.to_status || ev.type || "info"}`} />
+                                <div className="timelineBody">
+                                    <div className="timelineTop">
+                                        <div className="timelineTitle">
+                                            {ev.message || ev.type?.replace("_", " ") || "Update"}
+                                        </div>
+                                        <div className="timelineTime">{fmtEventTime(ev.created_at)}</div>
+                                    </div>
+
+                                    {(ev.from_status || ev.to_status) && (
+                                        <div className="subtle">
+                                            {ev.from_status ? `${ev.from_status.replace("_", " ")} → ` : ""}
+                                            {ev.to_status ? ev.to_status.replace("_", " ") : ""}
+                                        </div>
+                                    )}
+
+                                    {ev.quote_cents != null && (
+                                        <div className="subtle">Quote: {money(ev.quote_cents)}</div>
+                                    )}
+
+                                    {ev.actor && (
+                                        <div className="subtle">
+                                            By: {ev.actor.name || ev.actor.email} ({ev.actor.role})
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     const renderCard = (b, mode) => {
         const status = b.status || "requested";
+        const open = openTimelineId === b.id;
 
         return (
             <div key={b.id} className="card">
@@ -174,10 +281,7 @@ export default function TechnicianBookings() {
                             📍 {b.service?.city || "-"} • 👤 {b.user?.name || b.user?.email || "-"}
                         </div>
                     </div>
-
-                    <span className={`badge ${status}`}>
-                        {status.replace("_", " ")}
-                    </span>
+                    <span className={`badge ${status}`}>{status.replace("_", " ")}</span>
                 </div>
 
                 <div className="spacer" />
@@ -194,6 +298,10 @@ export default function TechnicianBookings() {
                             disabled={savingId === b.id}
                         >
                             {savingId === b.id ? "Accepting..." : "Accept"}
+                        </button>
+
+                        <button className="ghost" onClick={() => toggleTimeline(b.id)}>
+                            {open ? "Hide timeline" : "View timeline"}
                         </button>
                     </div>
                 ) : (
@@ -233,16 +341,24 @@ export default function TechnicianBookings() {
                                 />
                             </div>
 
-                            <button
-                                className="primary"
-                                onClick={() => updateBooking(b.id)}
-                                disabled={savingId === b.id}
-                            >
-                                {savingId === b.id ? "Saving..." : "Save update"}
-                            </button>
+                            <div className="row" style={{ marginTop: 8 }}>
+                                <button
+                                    className="primary"
+                                    onClick={() => updateBooking(b.id)}
+                                    disabled={savingId === b.id}
+                                >
+                                    {savingId === b.id ? "Saving..." : "Save update"}
+                                </button>
+
+                                <button className="ghost" onClick={() => toggleTimeline(b.id)}>
+                                    {open ? "Hide timeline" : "View timeline"}
+                                </button>
+                            </div>
                         </div>
                     </>
                 )}
+
+                <Timeline bookingId={b.id} />
             </div>
         );
     };
@@ -266,7 +382,6 @@ export default function TechnicianBookings() {
 
                 {!loading && !error && (
                     <>
-                        {/* Filter bar */}
                         <div className="card" style={{ marginTop: 12 }}>
                             <div className="cardHeader">
                                 <div>
@@ -326,7 +441,6 @@ export default function TechnicianBookings() {
                             </div>
                         </div>
 
-                        {/* Results */}
                         {filtered.length === 0 ? (
                             <div className="card" style={{ marginTop: 16 }}>
                                 <p>No bookings match your filters.</p>

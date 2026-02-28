@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\BookingEventController;
 
 /*
 |--------------------------------------------------------------------------
@@ -69,4 +70,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/admin/bookings/{booking}', [BookingController::class, 'adminUpdate']);
         Route::get('/admin/technicians', [AdminController::class, 'technicians'])->middleware('role:admin');
     });
+
+    Route::get('/bookings/{booking}/events', [BookingEventController::class, 'index']);
 });

@@ -4,9 +4,24 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Booking;
+use App\Models\BookingEvent;
 
 class BookingController extends Controller
 {
+    private function logEvent(Booking $booking, Request $request, array $data): void
+    {
+        BookingEvent::create([
+            'booking_id' => $booking->id,
+            'actor_id'   => $request->user()?->id,
+            'type'       => $data['type'],
+            'from_status' => $data['from_status'] ?? null,
+            'to_status'  => $data['to_status'] ?? null,
+            'quote_cents' => $data['quote_cents'] ?? null,
+            'message'    => $data['message'] ?? null,
+            'meta'       => $data['meta'] ?? null,
+        ]);
+    }
+
     // USER: create booking request
     public function store(Request $request)
     {
@@ -22,17 +37,22 @@ class BookingController extends Controller
             'requested_time' => $data['requested_time'] ?? null,
             'problem_description' => $data['problem_description'] ?? null,
             'status' => 'requested',
-            'quote_cents' => null,
-            'technician_id' => null,
         ]);
 
-        return $booking->load(['service']);
+        // timeline event: created
+        $this->logEvent($booking, $request, [
+            'type' => 'created',
+            'to_status' => 'requested',
+            'message' => 'Booking created',
+        ]);
+
+        return $booking;
     }
 
     // USER: list my bookings
     public function myBookings(Request $request)
     {
-        return Booking::with(['service', 'technician'])
+        return Booking::with('service')
             ->where('user_id', $request->user()->id)
             ->latest()
             ->get();
@@ -52,89 +72,135 @@ class BookingController extends Controller
         $data = $request->validate([
             'technician_id' => ['nullable', 'exists:users,id'],
             'quote_cents' => ['nullable', 'integer', 'min:0'],
-            'status' => ['nullable', 'string', 'in:requested,accepted,quoted,in_progress,completed,cancelled'],
-            'requested_time' => ['nullable', 'date'],
+            'status' => ['nullable', 'string'],
         ]);
 
+        // capture old values
+        $oldTech   = $booking->technician_id;
+        $oldQuote  = $booking->quote_cents;
+        $oldStatus = $booking->status;
+
         $booking->update($data);
+
+        // timeline events based on what changed
+        if (array_key_exists('technician_id', $data) && $oldTech !== $booking->technician_id) {
+            $this->logEvent($booking, $request, [
+                'type' => 'technician_assigned',
+                'message' => $booking->technician_id
+                    ? "Technician assigned (ID {$booking->technician_id})"
+                    : "Technician unassigned",
+                'meta' => [
+                    'from' => $oldTech,
+                    'to' => $booking->technician_id,
+                ],
+            ]);
+        }
+
+        if (array_key_exists('quote_cents', $data) && $oldQuote !== $booking->quote_cents) {
+            $this->logEvent($booking, $request, [
+                'type' => 'quote_set',
+                'quote_cents' => $booking->quote_cents,
+                'message' => 'Quote updated',
+                'meta' => [
+                    'from' => $oldQuote,
+                    'to' => $booking->quote_cents,
+                ],
+            ]);
+        }
+
+        if (array_key_exists('status', $data) && $oldStatus !== $booking->status) {
+            $this->logEvent($booking, $request, [
+                'type' => 'status_changed',
+                'from_status' => $oldStatus,
+                'to_status' => $booking->status,
+                'message' => 'Status updated',
+            ]);
+        }
 
         return $booking->load(['service', 'user', 'technician']);
     }
 
-    // TECHNICIAN: view assigned bookings + unassigned requested bookings
+    // TECHNICIAN: view bookings (unassigned requested + assigned to me)
     public function technicianBookings(Request $request)
     {
-        $techId = $request->user()->id;
-
         return Booking::with(['service', 'user'])
-            ->where(function ($q) use ($techId) {
-                $q->where('technician_id', $techId)
+            ->where(function ($q) use ($request) {
+                $q->where('technician_id', $request->user()->id)
                     ->orWhere(function ($q2) {
-                        $q2->whereNull('technician_id')
-                            ->where('status', 'requested');
+                        $q2->whereNull('technician_id')->where('status', 'requested');
                     });
             })
             ->latest()
             ->get();
     }
 
-    // TECHNICIAN: accept booking + update quote/status
+    // TECHNICIAN: accept or update
     public function technicianUpdate(Request $request, Booking $booking)
     {
-        $techId = $request->user()->id;
+        $u = $request->user();
 
-        $data = $request->validate([
-            // "accept" is optional - when present it assigns booking to current technician
-            'action' => ['nullable', 'string', 'in:accept'],
-
-            // Optional updates
-            'status' => ['nullable', 'string', 'in:requested,accepted,quoted,in_progress,completed,cancelled'],
-            'quote_cents' => ['nullable', 'integer', 'min:0'],
-            'requested_time' => ['nullable', 'date'],
-        ]);
-
-        // Accept flow (works even if booking was unassigned)
-        if (($data['action'] ?? null) === 'accept') {
-            // already assigned to another technician
-            if ($booking->technician_id !== null && $booking->technician_id !== $techId) {
-                return response()->json(['message' => 'Booking already assigned to another technician.'], 409);
+        // Accept flow: { action: "accept" }
+        if ($request->input('action') === 'accept') {
+            // only allow accepting unassigned requested
+            if ($booking->technician_id || $booking->status !== 'requested') {
+                return response()->json(['message' => 'Cannot accept this booking'], 422);
             }
 
-            // assign to me if unassigned
-            if ($booking->technician_id === null) {
-                $booking->technician_id = $techId;
-            }
+            $oldStatus = $booking->status;
 
-            // if requested -> accepted
-            if ($booking->status === 'requested') {
-                $booking->status = 'accepted';
-            }
+            $booking->update([
+                'technician_id' => $u->id,
+                'status' => 'accepted',
+            ]);
+
+            $this->logEvent($booking, $request, [
+                'type' => 'accepted',
+                'from_status' => $oldStatus,
+                'to_status' => 'accepted',
+                'message' => 'Technician accepted booking',
+            ]);
+
+            $this->logEvent($booking, $request, [
+                'type' => 'technician_assigned',
+                'message' => "Technician assigned (ID {$u->id})",
+                'meta' => ['to' => $u->id],
+            ]);
+
+            return $booking->load(['service', 'user']);
         }
 
-        // If booking is assigned and not mine => forbid
-        if ($booking->technician_id !== null && $booking->technician_id !== $techId) {
+        // Normal update flow (must be assigned to this technician)
+        if ($booking->technician_id !== $u->id) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        // Apply optional updates
-        if (array_key_exists('status', $data) && $data['status'] !== null) {
-            $booking->status = $data['status'];
+        $data = $request->validate([
+            'status' => ['nullable', 'string'],
+            'quote_cents' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $oldStatus = $booking->status;
+        $oldQuote = $booking->quote_cents;
+
+        $booking->update($data);
+
+        if (array_key_exists('quote_cents', $data) && $oldQuote !== $booking->quote_cents) {
+            $this->logEvent($booking, $request, [
+                'type' => 'quote_set',
+                'quote_cents' => $booking->quote_cents,
+                'message' => 'Quote updated',
+                'meta' => ['from' => $oldQuote, 'to' => $booking->quote_cents],
+            ]);
         }
 
-        if (array_key_exists('quote_cents', $data)) {
-            $booking->quote_cents = $data['quote_cents'];
-
-            // If quote set and booking in early states, move to "quoted"
-            if ($data['quote_cents'] !== null && in_array($booking->status, ['requested', 'accepted'], true)) {
-                $booking->status = 'quoted';
-            }
+        if (array_key_exists('status', $data) && $data['status'] && $oldStatus !== $booking->status) {
+            $this->logEvent($booking, $request, [
+                'type' => 'status_changed',
+                'from_status' => $oldStatus,
+                'to_status' => $booking->status,
+                'message' => 'Status updated',
+            ]);
         }
-
-        if (array_key_exists('requested_time', $data)) {
-            $booking->requested_time = $data['requested_time'];
-        }
-
-        $booking->save();
 
         return $booking->load(['service', 'user']);
     }

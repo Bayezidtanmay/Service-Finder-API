@@ -38,4 +38,8 @@ class Booking extends Model
     {
         return $this->belongsTo(User::class, 'technician_id');
     }
+    public function events()
+    {
+        return $this->hasMany(\App\Models\BookingEvent::class)->latest();
+    }
 }
