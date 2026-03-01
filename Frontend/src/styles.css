@@ -499,3 +499,58 @@
     font-size: 12px;
     white-space: nowrap;
   }
+
+/* ===== Image Modal ===== */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 9999;
+}
+
+.modalContent {
+  width: min(1100px, 100%);
+  background: rgba(17, 20, 28, .75);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  box-shadow: 0 30px 120px rgba(0,0,0,.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.modalClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  height: 38px;
+  width: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  cursor: pointer;
+}
+
+.modalClose:hover {
+  background: rgba(255,255,255,.12);
+}
+
+.modalImg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.clickableImg {
+  cursor: zoom-in;
+  transition: transform .15s ease, opacity .15s ease;
+}
+
+.clickableImg:hover {
+  transform: translateY(-1px);
+  opacity: .95;
+}

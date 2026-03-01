@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { api } from "../api";
 import Navbar from "../components/Navbar.jsx";
 import Toast from "../components/Toast.jsx";
+import ImageModal from "../components/ImageModal.jsx";
 
 const money = (cents) =>
     cents == null ? "-" : `€${(Number(cents) / 100).toFixed(2)}`;
@@ -42,6 +43,14 @@ export default function TechnicianBookings() {
     const removeToast = useCallback((id) => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
     }, []);
+
+    // image modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalSrc, setModalSrc] = useState("");
+    const openPhoto = (url) => {
+        setModalSrc(`http://127.0.0.1:8000${url}`);
+        setModalOpen(true);
+    };
 
     async function load() {
         try {
@@ -276,7 +285,8 @@ export default function TechnicianBookings() {
                 <div className="cardHeader">
                     <div>
                         <h3 style={{ marginBottom: 6 }}>
-                            {b.service?.name || "Service"} <span className="subtle">#{b.id}</span>
+                            {b.service?.name || "Service"}{" "}
+                            <span className="subtle">#{b.id}</span>
                         </h3>
                         <div className="subtle">
                             📍 {b.service?.city || "-"} • 👤 {b.user?.name || b.user?.email || "-"}
@@ -291,12 +301,14 @@ export default function TechnicianBookings() {
                     <b>Description:</b> {b.problem_description || "-"}
                 </p>
 
-                {/* ✅ NEW: show problem photo */}
+                {/* ✅ Problem photo (click to open fullscreen) */}
                 {b.problem_photo_url && (
                     <div style={{ marginTop: 10 }}>
                         <img
+                            className="clickableImg"
                             src={`http://127.0.0.1:8000${b.problem_photo_url}`}
                             alt="Problem"
+                            onClick={() => openPhoto(b.problem_photo_url)}
                             style={{
                                 width: "100%",
                                 borderRadius: 12,
@@ -489,6 +501,14 @@ export default function TechnicianBookings() {
                     </>
                 )}
             </div>
+
+            {/* Fullscreen image modal */}
+            <ImageModal
+                open={modalOpen}
+                src={modalSrc}
+                alt="Problem photo"
+                onClose={() => setModalOpen(false)}
+            />
         </>
     );
 }

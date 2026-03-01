@@ -3,6 +3,7 @@ import { api } from "../api";
 import Navbar from "../components/Navbar.jsx";
 import { useAuth } from "../auth/AuthContext.jsx";
 import Toast from "../components/Toast.jsx";
+import ImageModal from "../components/ImageModal.jsx";
 
 const money = (cents) =>
     cents == null ? "-" : `€${(Number(cents) / 100).toFixed(2)}`;
@@ -57,6 +58,14 @@ export default function AdminDashboard() {
     const removeToast = useCallback((id) => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
     }, []);
+
+    // image modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalSrc, setModalSrc] = useState("");
+    const openPhoto = (url) => {
+        setModalSrc(`http://127.0.0.1:8000${url}`);
+        setModalOpen(true);
+    };
 
     async function load() {
         try {
@@ -470,12 +479,14 @@ export default function AdminDashboard() {
                                                     <b>Problem:</b> {b.problem_description || "-"}
                                                 </p>
 
-                                                {/* ✅ NEW: show problem photo */}
+                                                {/* ✅ Problem photo (click to open fullscreen) */}
                                                 {b.problem_photo_url && (
                                                     <div style={{ marginTop: 10 }}>
                                                         <img
+                                                            className="clickableImg"
                                                             src={`http://127.0.0.1:8000${b.problem_photo_url}`}
                                                             alt="Problem"
+                                                            onClick={() => openPhoto(b.problem_photo_url)}
                                                             style={{
                                                                 width: "100%",
                                                                 borderRadius: 12,
@@ -560,6 +571,14 @@ export default function AdminDashboard() {
                     </>
                 )}
             </div>
+
+            {/* Fullscreen image modal */}
+            <ImageModal
+                open={modalOpen}
+                src={modalSrc}
+                alt="Problem photo"
+                onClose={() => setModalOpen(false)}
+            />
         </>
     );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import ImageModal from "../components/ImageModal.jsx";
 
 const money = (cents) =>
     cents == null ? "-" : `€${(Number(cents) / 100).toFixed(2)}`;
@@ -27,6 +28,15 @@ export default function MyBookings() {
     const [openTimelineId, setOpenTimelineId] = useState(null);
     const [eventsByBookingId, setEventsByBookingId] = useState({});
     const [eventsLoadingId, setEventsLoadingId] = useState(null);
+
+    // image modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalSrc, setModalSrc] = useState("");
+
+    const openPhoto = (url) => {
+        setModalSrc(`http://127.0.0.1:8000${url}`);
+        setModalOpen(true);
+    };
 
     async function loadBookings() {
         try {
@@ -127,12 +137,14 @@ export default function MyBookings() {
                                 <b>Problem:</b> {b.problem_description?.trim() || "-"}
                             </p>
 
-                            {/* ✅ NEW: show uploaded problem photo */}
+                            {/* ✅ Problem photo (click to open fullscreen) */}
                             {b.problem_photo_url && (
                                 <div style={{ marginTop: 10 }}>
                                     <img
+                                        className="clickableImg"
                                         src={`http://127.0.0.1:8000${b.problem_photo_url}`}
                                         alt="Problem"
+                                        onClick={() => openPhoto(b.problem_photo_url)}
                                         style={{
                                             width: "100%",
                                             borderRadius: 12,
@@ -185,9 +197,7 @@ export default function MyBookings() {
                                                                         {ev.from_status.replace("_", " ")} →{" "}
                                                                     </>
                                                                 ) : null}
-                                                                {ev.to_status
-                                                                    ? ev.to_status.replace("_", " ")
-                                                                    : ""}
+                                                                {ev.to_status ? ev.to_status.replace("_", " ") : ""}
                                                             </div>
                                                         )}
 
@@ -214,6 +224,14 @@ export default function MyBookings() {
                     );
                 })}
             </div>
+
+            {/* Fullscreen image modal */}
+            <ImageModal
+                open={modalOpen}
+                src={modalSrc}
+                alt="Problem photo"
+                onClose={() => setModalOpen(false)}
+            />
         </div>
     );
 }
