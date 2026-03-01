@@ -26,7 +26,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role'
+        'role',
+        'phone',
+        'city',
+        'bio',
+        'avatar_path',
     ];
 
     /**
@@ -38,6 +42,13 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    protected $appends = ['avatar_url'];
+
+    public function getAvatarUrlAttribute()
+    {
+        return $this->avatar_path ? '/storage/' . $this->avatar_path : null;
+    }
 
     /**
      * Get the attributes that should be cast.
