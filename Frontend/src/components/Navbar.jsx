@@ -71,6 +71,8 @@ export default function Navbar() {
                     <button className="danger" onClick={handleLogout}>
                         Logout
                     </button>
+                    <button className="ghost" onClick={() => nav("/profile")}>Profile</button>
+
                 </div>
             </div>
         </div>

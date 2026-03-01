@@ -554,3 +554,15 @@
   transform: translateY(-1px);
   opacity: .95;
 }
+
+.buttonLike {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 0;
+  cursor: pointer;
+  user-select: none;
+}
