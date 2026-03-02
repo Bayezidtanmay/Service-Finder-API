@@ -8,6 +8,7 @@ import { useAuth } from "./auth/AuthContext.jsx";
 import TechnicianBookings from "./pages/TechnicianBookings.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import Profile from "./pages/Profile.jsx";
+import AdminAnalytics from "./pages/AdminAnalytics.jsx";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -84,6 +85,15 @@ export default function App() {
         element={
           <Protected>
             <Profile />
+          </Protected>
+        }
+      />
+
+      <Route
+        path="/admin/analytics"
+        element={
+          <Protected>
+            <AdminAnalytics />
           </Protected>
         }
       />

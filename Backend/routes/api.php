@@ -8,6 +8,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BookingEventController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\AdminAnalyticsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -78,4 +79,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
     Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar']);
+
+    Route::get('/admin/analytics', [AdminAnalyticsController::class, 'index'])->middleware('role:admin');
 });

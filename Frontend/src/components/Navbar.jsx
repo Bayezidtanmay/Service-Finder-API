@@ -57,6 +57,12 @@ export default function Navbar() {
                                 Admin
                             </NavLink>
                         )}
+
+                        {user?.role === "admin" && (
+                            <button className="ghost" onClick={() => nav("/admin/analytics")}>
+                                Analytics
+                            </button>
+                        )}
                     </nav>
                 </div>
 
