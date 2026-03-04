@@ -12,8 +12,20 @@ export function clearToken() {
   localStorage.removeItem("token");
 }
 
-async function parseResponse(res) {
+async function request(path, options = {}) {
+  const token = getToken();
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  });
+
   const text = await res.text();
+
   let data = null;
   try {
     data = text ? JSON.parse(text) : null;
@@ -24,46 +36,29 @@ async function parseResponse(res) {
   if (!res.ok) {
     const msg =
       (data && data.message) ||
+      (data && data.errors && Object.values(data.errors).flat().join(" ")) ||
       (typeof data === "string" && data) ||
       `Request failed (${res.status})`;
+
     throw new Error(msg);
   }
 
   return data;
 }
 
-// JSON requests
+// JSON helper (default for most requests)
 export async function api(path, options = {}) {
-  const token = getToken();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-  });
-
-  return parseResponse(res);
+  return request(path, { ...options, headers });
 }
 
-// multipart/form-data requests (file uploads)
-export async function apiForm(path, formData, options = {}) {
-  const token = getToken();
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: options.method || "POST",
-    body: formData,
-    headers: {
-      Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-      // IMPORTANT: do NOT set Content-Type here, browser sets boundary automatically
-    },
-  });
-
-  return parseResponse(res);
+// ✅ FormData helper (for file uploads)
+export async function apiForm(path, options = {}) {
+  // IMPORTANT: do NOT set Content-Type here
+  return request(path, options);
 }
 

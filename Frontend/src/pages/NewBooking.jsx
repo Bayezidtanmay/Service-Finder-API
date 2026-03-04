@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api } from "../api";
+import { api, apiForm } from "../api";
 
 export default function NewBooking() {
     const nav = useNavigate();
@@ -56,7 +56,7 @@ export default function NewBooking() {
             if (problemDescription) fd.append("problem_description", problemDescription);
             if (photoFile) fd.append("problem_photo", photoFile);
 
-            await api("/bookings", {
+            await apiForm("/bookings", {
                 method: "POST",
                 body: fd, // IMPORTANT: FormData
             });

@@ -1,5 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
+import NotificationsBell from "./NotificationsBell.jsx";
+
 
 export default function Navbar() {
     const nav = useNavigate();
@@ -78,6 +80,7 @@ export default function Navbar() {
                         Logout
                     </button>
                     <button className="ghost" onClick={() => nav("/profile")}>Profile</button>
+                    <NotificationsBell />
 
                 </div>
             </div>

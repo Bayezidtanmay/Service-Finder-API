@@ -649,3 +649,86 @@
   font-variant-numeric: tabular-nums;
   color: rgba(255,255,255,.85);
 }
+
+/* Notifications */
+.notifWrap { position: relative; }
+.notifBtn { position: relative; padding: 10px 12px; border-radius: 12px; }
+.notifIcon { font-size: 16px; }
+.notifBadge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 12px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 107, 107, 0.95);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.notifPanel {
+  position: absolute;
+  right: 0;
+  top: 46px;
+  width: min(420px, calc(100vw - 32px));
+  background: rgba(20, 24, 32, 0.98);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.45);
+  overflow: hidden;
+  z-index: 50;
+}
+
+.notifHeader {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notifTitle { font-weight: 700; }
+
+.notifList {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.notifEmpty {
+  padding: 16px;
+}
+
+.notifItem {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+
+.notifItem:hover {
+  background: rgba(255,255,255,.04);
+}
+
+.notifItem.unread {
+  background: rgba(48, 62, 247, 0.08);
+}
+
+.notifItemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notifItemTitle { font-weight: 650; }
+.notifItemMsg { margin-top: 6px; }
+.notifItemMeta { margin-top: 6px; font-size: 12px; }
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(48, 62, 247, 0.95);
+  border: 1px solid rgba(255,255,255,.2);
+}
