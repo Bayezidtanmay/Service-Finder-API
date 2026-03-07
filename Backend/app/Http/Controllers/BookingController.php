@@ -147,7 +147,7 @@ class BookingController extends Controller
     // USER: list my bookings
     public function myBookings(Request $request)
     {
-        return Booking::with('service')
+        return Booking::with(['service', 'review'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->get();

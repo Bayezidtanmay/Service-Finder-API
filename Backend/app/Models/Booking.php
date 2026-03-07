@@ -52,4 +52,8 @@ class Booking extends Model
     {
         return $this->hasMany(\App\Models\BookingEvent::class)->latest();
     }
+    public function review()
+    {
+        return $this->hasOne(\App\Models\Review::class);
+    }
 }

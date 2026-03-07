@@ -10,6 +10,7 @@ use App\Http\Controllers\BookingEventController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ReviewController;
 
 /*
 |--------------------------------------------------------------------------
@@ -87,4 +88,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::post('/bookings/{booking}/review', [ReviewController::class, 'store']);
 });
