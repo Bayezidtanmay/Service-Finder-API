@@ -17,6 +17,32 @@ const fmtEventTime = (value) => {
     return Number.isNaN(d.getTime()) ? "" : d.toLocaleString();
 };
 
+function StarPicker({ value, onChange }) {
+    return (
+        <div style={{ display: "flex", gap: 6, fontSize: 24 }}>
+            {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                    key={n}
+                    type="button"
+                    onClick={() => onChange(n)}
+                    style={{
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: 0,
+                        lineHeight: 1,
+                        color: n <= value ? "#fbbf24" : "rgba(255,255,255,.28)",
+                    }}
+                    aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
+                    title={`${n} star${n > 1 ? "s" : ""}`}
+                >
+                    ★
+                </button>
+            ))}
+        </div>
+    );
+}
+
 export default function MyBookings() {
     const nav = useNavigate();
 
@@ -32,6 +58,11 @@ export default function MyBookings() {
     // image modal state
     const [modalOpen, setModalOpen] = useState(false);
     const [modalSrc, setModalSrc] = useState("");
+
+    // review state per booking
+    const [ratingByBookingId, setRatingByBookingId] = useState({});
+    const [commentByBookingId, setCommentByBookingId] = useState({});
+    const [reviewSavingId, setReviewSavingId] = useState(null);
 
     const openPhoto = (url) => {
         setModalSrc(`http://127.0.0.1:8000${url}`);
@@ -77,6 +108,34 @@ export default function MyBookings() {
         }
     }
 
+    async function submitReview(bookingId) {
+        const rating = ratingByBookingId[bookingId];
+        const comment = commentByBookingId[bookingId] || "";
+
+        if (!rating) {
+            alert("Please select a rating.");
+            return;
+        }
+
+        try {
+            setReviewSavingId(bookingId);
+
+            await api(`/bookings/${bookingId}/review`, {
+                method: "POST",
+                body: JSON.stringify({
+                    rating,
+                    comment,
+                }),
+            });
+
+            await loadBookings();
+        } catch (e) {
+            alert(e?.message || "Failed to submit review");
+        } finally {
+            setReviewSavingId(null);
+        }
+    }
+
     useEffect(() => {
         loadBookings();
     }, []);
@@ -107,6 +166,7 @@ export default function MyBookings() {
                     const status = b.status || "requested";
                     const open = openTimelineId === b.id;
                     const events = eventsByBookingId[b.id] || [];
+                    const hasReview = !!b.review;
 
                     return (
                         <div key={b.id} className="card">
@@ -137,7 +197,7 @@ export default function MyBookings() {
                                 <b>Problem:</b> {b.problem_description?.trim() || "-"}
                             </p>
 
-                            {/* ✅ Problem photo (click to open fullscreen) */}
+                            {/* Problem photo */}
                             {b.problem_photo_url && (
                                 <div style={{ marginTop: 10 }}>
                                     <img
@@ -157,6 +217,84 @@ export default function MyBookings() {
                             <p style={{ marginTop: 10 }}>
                                 <b>Quote:</b> {money(b.quote_cents)}
                             </p>
+
+                            {/* Review section */}
+                            {status === "completed" && (
+                                <div
+                                    style={{
+                                        marginTop: 16,
+                                        paddingTop: 14,
+                                        borderTop: "1px solid rgba(255,255,255,.08)",
+                                    }}
+                                >
+                                    {!hasReview ? (
+                                        <>
+                                            <h4 style={{ margin: "0 0 10px" }}>Leave a Review</h4>
+
+                                            <StarPicker
+                                                value={ratingByBookingId[b.id] || 0}
+                                                onChange={(val) =>
+                                                    setRatingByBookingId((prev) => ({
+                                                        ...prev,
+                                                        [b.id]: val,
+                                                    }))
+                                                }
+                                            />
+
+                                            <textarea
+                                                value={commentByBookingId[b.id] || ""}
+                                                onChange={(e) =>
+                                                    setCommentByBookingId((prev) => ({
+                                                        ...prev,
+                                                        [b.id]: e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="Write your review (optional)"
+                                                rows={4}
+                                                style={{
+                                                    width: "100%",
+                                                    marginTop: 12,
+                                                    padding: 12,
+                                                    borderRadius: 12,
+                                                    border: "1px solid rgba(255,255,255,.10)",
+                                                    background: "rgba(255,255,255,.03)",
+                                                    color: "white",
+                                                    resize: "vertical",
+                                                }}
+                                            />
+
+                                            <div className="row" style={{ marginTop: 12 }}>
+                                                <button
+                                                    className="primary"
+                                                    onClick={() => submitReview(b.id)}
+                                                    disabled={reviewSavingId === b.id}
+                                                >
+                                                    {reviewSavingId === b.id ? "Submitting..." : "Submit Review"}
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <h4 style={{ margin: "0 0 10px" }}>Your Review</h4>
+
+                                            <div style={{ fontSize: 22, color: "#fbbf24" }}>
+                                                {"★".repeat(b.review.rating)}
+                                                <span style={{ color: "rgba(255,255,255,.20)" }}>
+                                                    {"★".repeat(5 - b.review.rating)}
+                                                </span>
+                                            </div>
+
+                                            <p style={{ marginTop: 10 }}>
+                                                <b>Rating:</b> {b.review.rating}/5
+                                            </p>
+
+                                            <p>
+                                                <b>Comment:</b> {b.review.comment?.trim() || "-"}
+                                            </p>
+                                        </>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="row" style={{ marginTop: 12 }}>
                                 <button className="ghost" onClick={() => toggleTimeline(b.id)}>
