@@ -10,7 +10,6 @@ function normStatus(s) {
     return String(s || "requested");
 }
 
-// Simple SVG line chart
 function LineChart({ data, valueKey, label, height = 120 }) {
     const padding = 12;
 
@@ -48,14 +47,11 @@ function LineChart({ data, valueKey, label, height = 120 }) {
             </div>
 
             <svg viewBox="0 0 520 120" className="chartSvg" style={{ height }}>
-                {/* grid */}
                 <line x1="12" y1="108" x2="508" y2="108" className="chartGrid" />
                 <line x1="12" y1="12" x2="12" y2="108" className="chartGrid" />
 
-                {/* line */}
                 <path d={d} className="chartPath" />
 
-                {/* dots */}
                 {points.map((p, idx) => (
                     <circle key={idx} cx={p.x} cy={p.y} r="3" className="chartDot" />
                 ))}
@@ -64,7 +60,6 @@ function LineChart({ data, valueKey, label, height = 120 }) {
     );
 }
 
-// Simple bar chart
 function BarChart({ items, height = 140, title }) {
     const max = useMemo(() => Math.max(1, ...items.map((x) => x.value || 0)), [items]);
 
@@ -93,6 +88,11 @@ function BarChart({ items, height = 140, title }) {
     );
 }
 
+function stars(avg) {
+    const full = Math.round(avg || 0);
+    return "★".repeat(full) + "☆".repeat(5 - full);
+}
+
 export default function AdminAnalytics() {
     const { user } = useAuth();
 
@@ -118,7 +118,6 @@ export default function AdminAnalytics() {
 
     useEffect(() => {
         load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [days]);
 
     const statusItems = useMemo(() => {
@@ -180,7 +179,6 @@ export default function AdminAnalytics() {
 
                 {!loading && !error && data && (
                     <>
-                        {/* KPI cards */}
                         <div className="grid" style={{ marginTop: 0 }}>
                             <div className="card">
                                 <div className="subtle">Total bookings</div>
@@ -196,7 +194,26 @@ export default function AdminAnalytics() {
                             </div>
                         </div>
 
-                        {/* Charts */}
+                        {/* ✅ New review KPI cards */}
+                        <div className="grid" style={{ marginTop: 16 }}>
+                            <div className="card">
+                                <div className="subtle">Total reviews</div>
+                                <h2 style={{ margin: "10px 0 0" }}>{data.review_stats?.total_reviews ?? 0}</h2>
+                            </div>
+                            <div className="card">
+                                <div className="subtle">Average technician rating</div>
+                                <h2 style={{ margin: "10px 0 0" }}>
+                                    {data.review_stats?.avg_rating ?? 0} / 5
+                                </h2>
+                            </div>
+                            <div className="card">
+                                <div className="subtle">Rating stars</div>
+                                <h2 style={{ margin: "10px 0 0", color: "#fbbf24" }}>
+                                    {stars(data.review_stats?.avg_rating || 0)}
+                                </h2>
+                            </div>
+                        </div>
+
                         <div className="grid" style={{ marginTop: 16 }}>
                             <LineChart
                                 data={data.trend || []}
@@ -227,7 +244,50 @@ export default function AdminAnalytics() {
                             <BarChart title="Top services (by bookings)" items={topServicesItems} />
                         </div>
 
-                        {/* Quick legend */}
+                        {/* ✅ New technician ratings leaderboard */}
+                        <div className="card" style={{ marginTop: 16 }}>
+                            <div className="cardHeader">
+                                <div>
+                                    <h2 style={{ margin: 0 }}>Top Rated Technicians</h2>
+                                    <div className="subtle">Based on submitted customer reviews</div>
+                                </div>
+                            </div>
+
+                            {(data.top_technicians || []).length === 0 ? (
+                                <p style={{ marginTop: 14 }}>No technician reviews yet.</p>
+                            ) : (
+                                <div className="grid" style={{ marginTop: 14 }}>
+                                    {data.top_technicians.map((tech, idx) => (
+                                        <div key={tech.id} className="card">
+                                            <div className="cardHeader">
+                                                <div>
+                                                    <h3 style={{ marginBottom: 6 }}>
+                                                        #{idx + 1} {tech.name || tech.email}
+                                                    </h3>
+                                                    <div className="subtle">{tech.email}</div>
+                                                </div>
+
+                                                <span className="badge accepted">
+                                                    {tech.avg_rating} ★
+                                                </span>
+                                            </div>
+
+                                            <div className="spacer" />
+
+                                            <p>
+                                                <b>Average rating:</b>{" "}
+                                                <span style={{ color: "#fbbf24" }}>{stars(tech.avg_rating)}</span>
+                                            </p>
+
+                                            <p>
+                                                <b>Reviews:</b> {tech.reviews_count}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         <div className="card" style={{ marginTop: 16 }}>
                             <div className="subtle">Status legend</div>
                             <div className="actions" style={{ flexWrap: "wrap", marginTop: 10 }}>

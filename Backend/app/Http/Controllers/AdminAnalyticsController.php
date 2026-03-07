@@ -5,24 +5,22 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Booking;
+use App\Models\Review;
 
 class AdminAnalyticsController extends Controller
 {
     public function index(Request $request)
     {
-        // last 30 days
         $days = (int)($request->query('days', 30));
         if ($days < 7) $days = 7;
         if ($days > 180) $days = 180;
 
         $from = now()->subDays($days - 1)->startOfDay();
 
-        // Status counts (overall)
         $statusCounts = Booking::select('status', DB::raw('COUNT(*) as c'))
             ->groupBy('status')
             ->pluck('c', 'status');
 
-        // Trend: bookings per day (last N days)
         $trendRaw = Booking::select(
             DB::raw('DATE(created_at) as day'),
             DB::raw('COUNT(*) as total'),
@@ -34,7 +32,6 @@ class AdminAnalyticsController extends Controller
             ->orderBy('day')
             ->get();
 
-        // Fill missing days to keep the chart smooth
         $trendByDay = [];
         foreach ($trendRaw as $row) {
             $trendByDay[$row->day] = [
@@ -56,7 +53,6 @@ class AdminAnalyticsController extends Controller
             ];
         }
 
-        // Revenue trend (sum of quote_cents) by day for completed bookings
         $revenueRaw = Booking::select(
             DB::raw('DATE(created_at) as day'),
             DB::raw("SUM(CASE WHEN status='completed' THEN COALESCE(quote_cents,0) ELSE 0 END) as revenue_cents")
@@ -80,7 +76,6 @@ class AdminAnalyticsController extends Controller
             ];
         }
 
-        // Top services by bookings
         $topServices = Booking::query()
             ->join('services', 'services.id', '=', 'bookings.service_id')
             ->select(
@@ -93,15 +88,45 @@ class AdminAnalyticsController extends Controller
             ->limit(8)
             ->get();
 
-        // Basic KPIs
+        // ✅ New: technician rating leaderboard
+        $topTechnicians = Review::query()
+            ->join('users', 'users.id', '=', 'reviews.technician_id')
+            ->select(
+                'users.id',
+                'users.name',
+                'users.email',
+                DB::raw('AVG(reviews.rating) as avg_rating'),
+                DB::raw('COUNT(reviews.id) as reviews_count')
+            )
+            ->groupBy('users.id', 'users.name', 'users.email')
+            ->havingRaw('COUNT(reviews.id) > 0')
+            ->orderByDesc('avg_rating')
+            ->orderByDesc('reviews_count')
+            ->limit(8)
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'name' => $t->name,
+                    'email' => $t->email,
+                    'avg_rating' => round((float)$t->avg_rating, 1),
+                    'reviews_count' => (int)$t->reviews_count,
+                ];
+            });
+
         $totalBookings = Booking::count();
         $completed = Booking::where('status', 'completed')->count();
         $cancelled = Booking::where('status', 'cancelled')->count();
 
-        // Average quote for quoted/completed
         $avgQuote = Booking::whereIn('status', ['quoted', 'completed'])
             ->whereNotNull('quote_cents')
             ->avg('quote_cents');
+
+        // ✅ New: overall review stats
+        $reviewStats = [
+            'total_reviews' => Review::count(),
+            'avg_rating' => round((float)(Review::avg('rating') ?? 0), 1),
+        ];
 
         return response()->json([
             'days' => $days,
@@ -112,10 +137,12 @@ class AdminAnalyticsController extends Controller
                 'completion_rate' => $totalBookings ? round(($completed / $totalBookings) * 100, 1) : 0,
                 'avg_quote_cents' => $avgQuote ? (int) round($avgQuote) : null,
             ],
+            'review_stats' => $reviewStats,
             'status_counts' => $statusCounts,
             'trend' => $trend,
             'revenue' => $revenue,
             'top_services' => $topServices,
+            'top_technicians' => $topTechnicians,
         ]);
     }
 }
